@@ -7,6 +7,8 @@ import { URL } from 'url';
 
 dotenv.config()
 
+const TEST_ADDRESS =  process.env.FORDEFI_EVM_VAULT_ADDRESS || ""
+
 interface JsonRpcRequest {
   jsonrpc: '2.0';
   method: string;
@@ -276,7 +278,7 @@ class RPCTester {
     
     const testAddresses: string[] = [
       '0x0000000000000000000000000000000000000000', 
-      '0x8BFCF9e2764BC84DE4BBd0a0f5AAF19F47027A73', 
+      TEST_ADDRESS, 
     ];
     
     try {
