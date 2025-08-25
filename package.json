@@ -1,0 +1,21 @@
+{
+  "name": "nodes",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "og": "npx ts-node script.ts https://evmrpc.0g.ai",
+    "sei": "npx ts-node script.ts https://sei.drpc.org"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.1"
+  }
+}
