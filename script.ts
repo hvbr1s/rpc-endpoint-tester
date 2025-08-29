@@ -190,7 +190,8 @@ class RPCTester {
         420: 'Optimism Goerli',
         8453: 'Base Mainnet',
         84531: 'Base Goerli',
-        16661: '0G-Aristotle'
+        16661: '0G-Aristotle',
+        9600: 'RouterChain'
       };
       
       console.log(`${colors.green}✓${colors.reset} Chain ID: ${chainId} ${chainNames[chainId] ? `(${chainNames[chainId]})` : '(Unknown chain)'}`);
@@ -404,7 +405,6 @@ class RPCTester {
     }
   }
 
-  // Run all tests
   public async runAllTests(): Promise<TestResult> {
     console.log(`${colors.bright}${colors.blue}═══════════════════════════════════════════════════════${colors.reset}`);
     console.log(`${colors.bright}${colors.blue}         Ethereum RPC Endpoint Tester${colors.reset}`);
@@ -447,7 +447,6 @@ class RPCTester {
       }
     }
     
-    // Summary
     console.log(`\n${colors.bright}${colors.blue}═══════════════════════════════════════════════════════${colors.reset}`);
     console.log(`${colors.bright}                    SUMMARY${colors.reset}`);
     console.log(`${colors.bright}${colors.blue}═══════════════════════════════════════════════════════${colors.reset}`);

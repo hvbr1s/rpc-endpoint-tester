@@ -8,7 +8,10 @@
   "main": "index.js",
   "scripts": {
     "og": "npx ts-node script.ts https://evmrpc.0g.ai",
-    "sei": "npx ts-node script.ts https://sei.drpc.org"
+    "sei": "npx ts-node script.ts https://sei.drpc.org",
+    "router": "npx ts-node script.ts https://sentry.evm.rpc.routerprotocol.com/",
+    "bsc": "npx ts-node script.ts https://bsc.blockrazor.xyz",
+    "eth": "npx ts-node script.ts https://eth.llamarpc.com"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
