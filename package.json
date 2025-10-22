@@ -11,7 +11,10 @@
     "sei": "npx ts-node script.ts https://sei.drpc.org",
     "router": "npx ts-node script.ts https://sentry.evm.rpc.routerprotocol.com/",
     "bsc": "npx ts-node script.ts https://bsc.blockrazor.xyz",
-    "eth": "npx ts-node script.ts https://eth.llamarpc.com"
+    "eth": "npx ts-node script.ts https://eth.llamarpc.com",
+    "sapphire": "npx ts-node script.ts https://sapphire.oasis.io",
+    "tac": "npx ts-node script.ts https://rpc.ankr.com/tac",
+    "etherlink": "npx ts-node script.ts https://rpc.ankr.com/etherlink_mainnet"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",

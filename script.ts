@@ -47,10 +47,10 @@ interface BlockNumberResult {
 }
 
 interface FeeHistoryResult {
-  baseFeePerGas?: string[];
+  baseFeePerGas?: (string | number)[];
   gasUsedRatio: number[];
   oldestBlock: string;
-  reward?: string[][];
+  reward?: (string | number)[][];
 }
 
 interface TestResult {
@@ -190,8 +190,12 @@ class RPCTester {
         420: 'Optimism Goerli',
         8453: 'Base Mainnet',
         84531: 'Base Goerli',
+        1329: 'SEI Mainnet',
         16661: '0G-Aristotle',
-        9600: 'RouterChain'
+        9600: 'RouterChain',
+        23294: 'Oasis Sapphire',
+        239: 'TAC Mainnet',
+        42793: 'Etherlink'
       };
       
       console.log(`${colors.green}✓${colors.reset} Chain ID: ${chainId} ${chainNames[chainId] ? `(${chainNames[chainId]})` : '(Unknown chain)'}`);
@@ -311,24 +315,51 @@ class RPCTester {
 
   public async testFeeHistory(): Promise<boolean> {
     console.log(`\n${colors.bright}Testing eth_feeHistory (EIP-1559 support)...${colors.reset}`);
-    
+
     try {
-      // Request fee history for last 10 blocks with reward percentiles
-      const response = await this.makeRequest<FeeHistoryResult>('eth_feeHistory', [
-        '0xa', // 10 blocks
+      // Try hex format first (more common in JSON-RPC spec)
+      let response = await this.makeRequest<FeeHistoryResult>('eth_feeHistory', [
+        '0xa', // 10 blocks in hex
         'latest',
         [25, 50, 75] // percentiles
       ]);
-      
+
+      let parameterFormat: 'hex' | 'number' | null = null;
+
+      // If hex format fails, try number format
       if (response.error) {
-        // Check if error indicates lack of support
-        if (response.error.message.includes('not found') || 
-            response.error.message.includes('not supported')) {
-          console.log(`${colors.yellow}⚠ EIP-1559 not supported (Legacy gas pricing)${colors.reset}`);
-          this.results.eip1559 = false;
-          return true;
+        const hexError = response.error.message;
+
+        // Try number format if hex failed (common error patterns)
+        if (hexError.includes('unmarshal') || hexError.includes('destruct') ||
+            hexError.includes('parse') || hexError.includes('invalid') ||
+            hexError.includes('type') || hexError.includes('expected')) {
+
+          console.log(`  ${colors.yellow}Hex format failed, trying number format...${colors.reset}`);
+
+          response = await this.makeRequest<FeeHistoryResult>('eth_feeHistory', [
+            10, // 10 blocks as number
+            'latest',
+            [25, 50, 75] // percentiles
+          ]);
+
+          if (!response.error) {
+            parameterFormat = 'number';
+          }
         }
-        throw new Error(response.error.message);
+
+        // If still erroring, check if it's lack of EIP-1559 support
+        if (response.error) {
+          if (response.error.message.includes('not found') ||
+              response.error.message.includes('not supported')) {
+            console.log(`${colors.yellow}⚠ EIP-1559 not supported (Legacy gas pricing)${colors.reset}`);
+            this.results.eip1559 = false;
+            return true;
+          }
+          throw new Error(response.error.message);
+        }
+      } else {
+        parameterFormat = 'hex';
       }
       
       if (!response.result) {
@@ -340,15 +371,29 @@ class RPCTester {
       
       // Check if baseFeePerGas exists (EIP-1559 indicator)
       if (feeHistory.baseFeePerGas && feeHistory.baseFeePerGas.length > 0) {
-        const latestBaseFee = BigInt(feeHistory.baseFeePerGas[feeHistory.baseFeePerGas.length - 1]!);
+        const latestBaseFeeRaw = feeHistory.baseFeePerGas[feeHistory.baseFeePerGas.length - 1]!;
+        const latestBaseFee = BigInt(typeof latestBaseFeeRaw === 'number' ? `0x${latestBaseFeeRaw.toString(16)}` : latestBaseFeeRaw);
         const latestBaseFeeGwei = Number(latestBaseFee) / 1e9;
-        
+
         console.log(`${colors.green}✓ EIP-1559 Supported${colors.reset}`);
+        if (parameterFormat) {
+          console.log(`  ${colors.cyan}Parameter format: ${parameterFormat === 'hex' ? 'Hex string (0xa)' : 'Number (10)'}${colors.reset}`);
+        }
+
+        // Check if reward field is present
+        const hasRewardField = feeHistory.reward && feeHistory.reward.length > 0;
+        if (hasRewardField) {
+          console.log(`  ${colors.cyan}Reward field: ✓ Supported (returns priority fee percentiles)${colors.reset}`);
+        } else {
+          console.log(`  ${colors.yellow}Reward field: ✗ Not supported (no priority fee data)${colors.reset}`);
+        }
+
         console.log(`  Latest base fee: ${latestBaseFeeGwei.toFixed(2)} Gwei`);
-        
+
         // Calculate average base fee
-        const avgBaseFee = feeHistory.baseFeePerGas.reduce((sum, fee) => {
-          return sum + Number(BigInt(fee)) / 1e9;
+        const avgBaseFee = feeHistory.baseFeePerGas.reduce((sum: number, fee) => {
+          const feeValue = typeof fee === 'number' ? `0x${fee.toString(16)}` : fee;
+          return sum + Number(BigInt(feeValue)) / 1e9;
         }, 0) / feeHistory.baseFeePerGas.length;
         
         console.log(`  Average base fee (last 10 blocks): ${avgBaseFee.toFixed(2)} Gwei`);
@@ -358,9 +403,12 @@ class RPCTester {
           const latestRewards = feeHistory.reward[feeHistory.reward.length - 1];
           if (latestRewards && latestRewards.length > 0) {
             console.log(`  Priority fee percentiles (latest block):`);
-            console.log(`    25th: ${(Number(BigInt(latestRewards[0]!)) / 1e9).toFixed(2)} Gwei`);
-            console.log(`    50th: ${(Number(BigInt(latestRewards[1]!)) / 1e9).toFixed(2)} Gwei`);
-            console.log(`    75th: ${(Number(BigInt(latestRewards[2]!)) / 1e9).toFixed(2)} Gwei`);
+            const reward25 = typeof latestRewards[0] === 'number' ? `0x${latestRewards[0].toString(16)}` : latestRewards[0]!;
+            const reward50 = typeof latestRewards[1] === 'number' ? `0x${latestRewards[1].toString(16)}` : latestRewards[1]!;
+            const reward75 = typeof latestRewards[2] === 'number' ? `0x${latestRewards[2].toString(16)}` : latestRewards[2]!;
+            console.log(`    25th: ${(Number(BigInt(reward25)) / 1e9).toFixed(2)} Gwei`);
+            console.log(`    50th: ${(Number(BigInt(reward50)) / 1e9).toFixed(2)} Gwei`);
+            console.log(`    75th: ${(Number(BigInt(reward75)) / 1e9).toFixed(2)} Gwei`);
           }
         }
       } else {
